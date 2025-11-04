@@ -123,7 +123,7 @@ void picoboot3_bootsel_deinit() {
 
 bool picoboot3_bootsel_is_bootloader() {
   if (watchdog_hw->scratch[0]) {
-    watchdog_hw->scratch[0] = 0 ;
+    watchdog_hw->scratch[0] = 0;
     return true;
   }
   if (PICOBOOT3_BOOTSEL3_VAL_TO_START_BOOTLOADER == gpio_get(PICOBOOT3_BOOTSEL3_PIN)) {
