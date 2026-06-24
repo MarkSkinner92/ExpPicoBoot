@@ -227,11 +227,10 @@ SECTIONS
         __end__ = .;
         end = __end__;
         KEEP(*(.heap*))
-        /* historically on GCC sbrk was growing past __HeapLimit to __StackLimit, however
-           to be more compatible, we now set __HeapLimit explicitly to where the end of the heap is */
-        . = ORIGIN(RAM) + LENGTH(RAM);
-        __HeapLimit = .;
     } > RAM
+    /* historically on GCC sbrk was growing past __HeapLimit to __StackLimit, however
+       to be more compatible, we now set __HeapLimit explicitly to where the end of the heap is */
+    __HeapLimit = ORIGIN(RAM) + LENGTH(RAM);
 
     /* Start and end symbols must be word-aligned */
     .scratch_x : {
@@ -266,7 +265,7 @@ SECTIONS
     .stack_dummy (NOLOAD):
     {
         KEEP(*(.stack*))
-    } > SCRATCH_Y
+    } > RAM   /* was SCRATCH_Y */
 
     .flash_end : {
         KEEP(*(.embedded_end_block*))
@@ -276,7 +275,7 @@ SECTIONS
     /* stack limit is poorly named, but historically is maximum heap ptr */
     __StackLimit = ORIGIN(RAM) + LENGTH(RAM);
     __StackOneTop = ORIGIN(SCRATCH_X) + LENGTH(SCRATCH_X);
-    __StackTop = ORIGIN(SCRATCH_Y) + LENGTH(SCRATCH_Y);
+    __StackTop = ORIGIN(RAM) + LENGTH(RAM);
     __StackOneBottom = __StackOneTop - SIZEOF(.stack1_dummy);
     __StackBottom = __StackTop - SIZEOF(.stack_dummy);
     PROVIDE(__stack = __StackTop);
@@ -300,4 +299,3 @@ SECTIONS
 
     /* todo assert on extra code */
 }
-

@@ -1,0 +1,3 @@
+This is an example that blinks the blue light. It has a 32k offset, and is meant to be uploaded over uart, as to not overwrite the bootloader.
+
+the memmap_defualt_rp2350.ld is very important. It describes what the 32k offset looks like, and was extremely difficult to get right

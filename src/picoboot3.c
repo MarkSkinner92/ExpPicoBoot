@@ -35,6 +35,7 @@
 #define ERASE_COMMAND 0x30
 #define GO_TO_APPCODE_COMMAND 0x40
 #define FLASH_SIZE_COMMAND 0x50
+#define GPIO_HIGH_COMMAND 0x60
 #define ACTIVATE_COMMAND 0xA5
 
 // To determine what data to be sent to the host
@@ -69,6 +70,11 @@ typedef struct {
   uint8_t command;
   uint8_t sector[2];
 } erase_command_t;
+
+typedef struct {
+  uint8_t command;
+  uint8_t pin;
+} gpio_high_command_t;
 
 int activated_interface = NO_INTERFACE;  // Set activated interface
 const uint8_t activation_response[] = PICOBOOT3_ACTIVATION_RESPONSE;
@@ -252,6 +258,14 @@ void picoboot3_uart_rx_handler() {
         uart_receive_counter = 0;
         break;
 
+      case GPIO_HIGH_COMMAND:
+        if (uart_receive_counter < sizeof(gpio_high_command_t)) break;
+        gpio_init(uart_receive_buffer[1]);
+        gpio_set_dir(uart_receive_buffer[1], GPIO_OUT);
+        gpio_put(uart_receive_buffer[1], 1);
+        uart_receive_counter = 0;
+        break;
+
       case ACTIVATE_COMMAND:
         activated_interface = UART_INTERFACE;
         for (int i = 0; i < sizeof(activation_response); i++) {
@@ -423,6 +437,14 @@ void picoboot3_i2c_command_handler() {
       i2c_send_counter = 0;
       break;
 
+    case GPIO_HIGH_COMMAND:
+      if (i2c_receive_counter != sizeof(gpio_high_command_t)) break;
+      gpio_init(i2c_receive_buffer[1]);
+      gpio_set_dir(i2c_receive_buffer[1], GPIO_OUT);
+      gpio_put(i2c_receive_buffer[1], 1);
+      i2c_select_send_data = SEND_NONE;
+      break;
+
     case ACTIVATE_COMMAND:
       if (i2c_receive_counter != 1) break;
       activated_interface = I2C_INTERFACE;
@@ -583,6 +605,18 @@ void picoboot3_spi_slave_handler() {
       }
       spi_write_blocking(PICOBOOT3_SPI_INST, tmp_response_buffer, 4);
 
+      spi_receive_counter = 0;
+      picoboot3_spi_read(1);
+      break;
+
+    case GPIO_HIGH_COMMAND:
+      if (spi_receive_counter < sizeof(gpio_high_command_t)) {
+        picoboot3_spi_read(1);
+        break;
+      }
+      gpio_init(spi_receive_buffer[1]);
+      gpio_set_dir(spi_receive_buffer[1], GPIO_OUT);
+      gpio_put(spi_receive_buffer[1], 1);
       spi_receive_counter = 0;
       picoboot3_spi_read(1);
       break;
