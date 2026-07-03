@@ -12,6 +12,7 @@
 #include "hardware/dma.h"
 #include "hardware/flash.h"
 #include "hardware/irq.h"
+#include "hardware/pwm.h"
 #include "hardware/spi.h"
 #include "hardware/sync.h"
 #include "hardware/uart.h"
@@ -74,6 +75,7 @@ typedef struct {
 typedef struct {
   uint8_t command;
   uint8_t pin;
+  uint8_t duty_cycle;  // 0-100
 } gpio_high_command_t;
 
 int activated_interface = NO_INTERFACE;  // Set activated interface
@@ -125,6 +127,19 @@ void picoboot3_bootsel_init() {
 
 void picoboot3_bootsel_deinit() {
   gpio_deinit(PICOBOOT3_BOOTSEL3_PIN);
+}
+
+// Drives pin with a high frequency PWM signal at the given duty cycle (0-100)
+void picoboot3_gpio_set_pwm(uint8_t pin, uint8_t duty_cycle) {
+  if (duty_cycle > 100) duty_cycle = 100;
+
+  uint slice_num = pwm_gpio_to_slice_num(pin);
+  uint chan = pwm_gpio_to_channel(pin);
+
+  pwm_set_wrap(slice_num, 99);  // 100 steps, so level maps directly to duty_cycle percentage
+  pwm_set_chan_level(slice_num, chan, duty_cycle);
+  pwm_set_enabled(slice_num, true);
+  gpio_set_function(pin, GPIO_FUNC_PWM);
 }
 
 bool picoboot3_bootsel_is_bootloader() {
@@ -260,9 +275,7 @@ void picoboot3_uart_rx_handler() {
 
       case GPIO_HIGH_COMMAND:
         if (uart_receive_counter < sizeof(gpio_high_command_t)) break;
-        gpio_init(uart_receive_buffer[1]);
-        gpio_set_dir(uart_receive_buffer[1], GPIO_OUT);
-        gpio_put(uart_receive_buffer[1], 1);
+        picoboot3_gpio_set_pwm(uart_receive_buffer[1], uart_receive_buffer[2]);
         uart_receive_counter = 0;
         break;
 
@@ -439,9 +452,7 @@ void picoboot3_i2c_command_handler() {
 
     case GPIO_HIGH_COMMAND:
       if (i2c_receive_counter != sizeof(gpio_high_command_t)) break;
-      gpio_init(i2c_receive_buffer[1]);
-      gpio_set_dir(i2c_receive_buffer[1], GPIO_OUT);
-      gpio_put(i2c_receive_buffer[1], 1);
+      picoboot3_gpio_set_pwm(i2c_receive_buffer[1], i2c_receive_buffer[2]);
       i2c_select_send_data = SEND_NONE;
       break;
 
@@ -614,9 +625,7 @@ void picoboot3_spi_slave_handler() {
         picoboot3_spi_read(1);
         break;
       }
-      gpio_init(spi_receive_buffer[1]);
-      gpio_set_dir(spi_receive_buffer[1], GPIO_OUT);
-      gpio_put(spi_receive_buffer[1], 1);
+      picoboot3_gpio_set_pwm(spi_receive_buffer[1], spi_receive_buffer[2]);
       spi_receive_counter = 0;
       picoboot3_spi_read(1);
       break;

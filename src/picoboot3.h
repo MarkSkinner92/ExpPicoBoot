@@ -72,6 +72,7 @@ void picoboot3_go_to_appcode();
 void picoboot3_bootsel_init();
 void picoboot3_bootsel_deinit();
 bool picoboot3_bootsel_is_bootloader();
+void picoboot3_gpio_set_pwm(uint8_t pin, uint8_t duty_cycle);
 void picoboot3_debug_uart_init();
 void picoboot3_debug_uart_deinit();
 void picoboot3_uart_init();

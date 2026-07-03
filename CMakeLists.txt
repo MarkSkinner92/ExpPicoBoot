@@ -43,6 +43,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
   hardware_dma
   hardware_flash
   hardware_spi
+  hardware_pwm
 )
 
 if (PICO_CYW43_SUPPORTED)
